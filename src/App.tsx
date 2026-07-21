@@ -250,11 +250,11 @@ function MainAppContent() {
             {/* 8. Executive Committee Grid */}
             <Committee members={cmsData.committee} />
 
-            {/* 9. News & Board notices */}
-            <NewsSection items={cmsData.news} />
-
-            {/* 10. Photo Gallery with category Masonry */}
+            {/* 9. Photo Gallery with category Masonry */}
             <GallerySection items={cmsData.gallery} />
+
+            {/* 10. News & Board notices */}
+            <NewsSection items={cmsData.news} />
 
             {/* 11. Frequently Asked Questions Accordions */}
             <FAQ faqs={cmsData.faqs} />
