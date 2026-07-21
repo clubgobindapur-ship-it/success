@@ -4,7 +4,6 @@ import { getFirestore, doc, getDocFromServer } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBr6JeQWTjLHdgco3ncIet_YgC1HXZIj-Y",
   authDomain: "success-group-c58d5.firebaseapp.com",
   projectId: "success-group-c58d5",
   storageBucket: "success-group-c58d5.firebasestorage.app",
