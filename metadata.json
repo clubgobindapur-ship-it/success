@@ -1,0 +1,6 @@
+{
+  "name": "Success Cooperative Society",
+  "description": "Official web portal and administrative CMS for Success Cooperative Society with secure Firestore storage, member services, and notices.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

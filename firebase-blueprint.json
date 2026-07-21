@@ -1,0 +1,259 @@
+{
+  "entities": {
+    "HeroContent": {
+      "title": "HeroContent",
+      "description": "Hero section dynamic texts and background",
+      "type": "object",
+      "properties": {
+        "headline": { "type": "string" },
+        "subheadline": { "type": "string" },
+        "ctaText1": { "type": "string" },
+        "ctaText2": { "type": "string" },
+        "bgImageUrl": { "type": "string" }
+      },
+      "required": ["headline", "subheadline", "ctaText1", "ctaText2", "bgImageUrl"]
+    },
+    "AboutContent": {
+      "title": "AboutContent",
+      "description": "About section profile info, mission, vision and values",
+      "type": "object",
+      "properties": {
+        "intro": { "type": "string" },
+        "mission": { "type": "string" },
+        "vision": { "type": "string" },
+        "values": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["intro", "mission", "vision", "values"]
+    },
+    "WhyChooseUsItem": {
+      "title": "WhyChooseUsItem",
+      "description": "Feature highlights representing why choose us",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "iconName": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "title", "description", "iconName", "order"]
+    },
+    "ServiceItem": {
+      "title": "ServiceItem",
+      "description": "A specific service offered by the cooperative society",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "iconName": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "title", "description", "iconName", "order"]
+    },
+    "WaterContent": {
+      "title": "WaterContent",
+      "description": "Details of the Pure Drinking Water project initiative",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "features": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["title", "description", "imageUrl", "features"]
+    },
+    "SocialActivityItem": {
+      "title": "SocialActivityItem",
+      "description": "Social work activity item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "title", "description", "imageUrl", "order"]
+    },
+    "CommitteeMember": {
+      "title": "CommitteeMember",
+      "description": "Profile of an executive committee member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "bio": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "name", "position", "photoUrl", "phone", "email", "order"]
+    },
+    "StatItem": {
+      "title": "StatItem",
+      "description": "Performance indicator counters",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "value": { "type": "string" },
+        "label": { "type": "string" },
+        "iconName": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "value", "label", "iconName", "order"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Cooperative photo gallery item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string", "enum": ["social", "plantation", "water", "events", "meetings"] },
+        "date": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "imageUrl", "title", "category", "date", "order"]
+    },
+    "NewsItem": {
+      "title": "NewsItem",
+      "description": "Notice board and blog articles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "summary": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "date": { "type": "string" },
+        "isPublished": { "type": "boolean" }
+      },
+      "required": ["id", "title", "content", "summary", "imageUrl", "date", "isPublished"]
+    },
+    "FAQItem": {
+      "title": "FAQItem",
+      "description": "Frequently asked question item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "question", "answer", "order"]
+    },
+    "AwardItem": {
+      "title": "AwardItem",
+      "description": "An award or achievement of the cooperative society",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "date": { "type": "string" },
+        "authority": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "title", "description", "imageUrl", "date", "authority", "order"]
+    },
+    "ContactInfo": {
+      "title": "ContactInfo",
+      "description": "Contact info dynamic details",
+      "type": "object",
+      "properties": {
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "facebook": { "type": "string" },
+        "officeHours": { "type": "string" },
+        "googleMapUrl": { "type": "string" }
+      },
+      "required": ["address", "phone", "email", "whatsapp", "facebook", "officeHours", "googleMapUrl"]
+    },
+    "SEOMetadata": {
+      "title": "SEOMetadata",
+      "description": "Search Engine Optimization metadata dynamic tags",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "keywords": { "type": "string" },
+        "ogImage": { "type": "string" }
+      },
+      "required": ["title", "description", "keywords", "ogImage"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "User-submitted contact messages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "message": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "read", "replied"] }
+      },
+      "required": ["id", "name", "phone", "message", "date", "status"]
+    }
+  },
+  "firestore": {
+    "/website_content/{docId}": {
+      "schema": "HeroContent",
+      "description": "Singleton documents for home dynamic content (hero, about, water, contact_info, seo_metadata)"
+    },
+    "/why_choose_us/{docId}": {
+      "schema": "WhyChooseUsItem",
+      "description": "Why Choose Us items list"
+    },
+    "/services/{docId}": {
+      "schema": "ServiceItem",
+      "description": "Offered services list"
+    },
+    "/social_activities/{docId}": {
+      "schema": "SocialActivityItem",
+      "description": "Social activities/plantation/water initiatives pictures and details"
+    },
+    "/executive_committee/{docId}": {
+      "schema": "CommitteeMember",
+      "description": "List of executive directors and committee members"
+    },
+    "/statistics/{docId}": {
+      "schema": "StatItem",
+      "description": "Performance counters and numerical statistics shown on homepage"
+    },
+    "/gallery/{docId}": {
+      "schema": "GalleryItem",
+      "description": "Media center picture gallery items"
+    },
+    "/news/{docId}": {
+      "schema": "NewsItem",
+      "description": "Notice board, news updates, and press releases"
+    },
+    "/faqs/{docId}": {
+      "schema": "FAQItem",
+      "description": "FAQ accordions"
+    },
+    "/awards/{docId}": {
+      "schema": "AwardItem",
+      "description": "Achievements and awards list"
+    },
+    "/contact_messages/{messageId}": {
+      "schema": "ContactMessage",
+      "description": "User inquiries and feedback submissions"
+    }
+  }
+}

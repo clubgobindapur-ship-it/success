@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-teal: #0F766E;
+  --color-brand-teal-hover: #0d645d;
+  --color-brand-blue: #2563EB;
+  --color-brand-blue-hover: #1d4ed8;
+  --color-brand-orange: #F59E0B;
+  --color-brand-orange-light: #FFFBEB;
+  --color-brand-dark: #1E293B;
+  --color-brand-light: #F8FAFC;
+  --font-sans: "Hind Siliguri", "Inter", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: #F8FAFC;
+  color: #1E293B;
+  font-family: "Hind Siliguri", "Inter", system-ui, -apple-system, sans-serif;
+}
+

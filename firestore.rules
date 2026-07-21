@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'club.gobindapur@gmail.com' ||
+        request.auth.token.email == 'admin@success.com'
+      );
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Public content collections: Public can read, only signed-in administrators can write
+    match /website_content/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /why_choose_us/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /services/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /social_activities/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /executive_committee/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /statistics/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /gallery/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /news/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /testimonials/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /faqs/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /awards/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Public contact submissions: Public can create, only logged-in administrators can read/update/delete
+    match /contact_messages/{messageId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}
