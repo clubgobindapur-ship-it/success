@@ -73,14 +73,17 @@ function MainAppContent() {
   useEffect(() => {
     fetchCMSData();
 
-    // Firebase Auth subscription
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setAdminUser(user);
-      } else {
-        setAdminUser(null);
-      }
-    });
+    // Firebase Auth subscription (only when auth is available)
+    let unsubscribeAuth = () => {};
+    if (auth) {
+      unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          setAdminUser(user);
+        } else {
+          setAdminUser(null);
+        }
+      });
+    }
 
     // Hash change Router listener
     const handleHashChange = () => {
@@ -162,7 +165,7 @@ function MainAppContent() {
   // Logout Admin Handler
   const handleAdminLogout = async () => {
     try {
-      await signOut(auth);
+      if (auth) await signOut(auth);
       setAdminUser(null);
       showToast("success", "লগআউট সম্পন্ন!", "অ্যাডমিন সেশনটি নিরাপদে বন্ধ করা হয়েছে।");
       window.location.hash = "#home";
