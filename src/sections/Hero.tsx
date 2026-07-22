@@ -6,7 +6,7 @@ import { motion } from "motion/react";
 
 interface HeroProps {
   content: HeroContent;
-  onNavigate: (hash: string) => void;
+  onNavigate: (path: string) => void;
   phone: string;
 }
 
@@ -16,11 +16,7 @@ export function Hero({ content, onNavigate, phone }: HeroProps) {
       buttonName: "আমাদের সম্পর্কে",
       location: "hero"
     });
-    onNavigate("#about");
-    const element = document.getElementById("about");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    onNavigate("/about");
   };
 
   const handleCTA2Click = () => {
@@ -28,11 +24,7 @@ export function Hero({ content, onNavigate, phone }: HeroProps) {
       buttonName: "যোগাযোগ করুন",
       location: "hero"
     });
-    onNavigate("#contact");
-    const element = document.getElementById("contact");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    onNavigate("/contact");
   };
 
   return (

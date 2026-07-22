@@ -28,7 +28,9 @@ import {
   ContactInfo,
   SEOMetadata,
   ContactMessage,
-  AwardItem
+  AwardItem,
+  JobPosting,
+  JobApplication
 } from "../types";
 import * as seed from "../constants/seedData";
 
@@ -52,7 +54,9 @@ export const COLLECTIONS = {
   TESTIMONIALS: "testimonials",
   FAQS: "faqs",
   CONTACT_MESSAGES: "contact_messages",
-  AWARDS: "awards"
+  AWARDS: "awards",
+  JOBS: "jobs",
+  JOB_APPLICATIONS: "job_applications"
 };
 
 // ----------------------------------------------------
@@ -294,6 +298,62 @@ export async function deleteContactMessage(id: string): Promise<void> {
 }
 
 // ----------------------------------------------------
+// JOB APPLICATIONS API
+// ----------------------------------------------------
+
+export async function submitJobApplication(application: Omit<JobApplication, "id" | "appliedAt" | "status">): Promise<void> {
+  const collectionName = COLLECTIONS.JOB_APPLICATIONS;
+  try {
+    const colRef = collection(db, collectionName);
+    await addDoc(colRef, {
+      ...application,
+      appliedAt: new Date().toISOString().split("T")[0],
+      status: "new"
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, collectionName);
+  }
+}
+
+export async function getJobApplications(): Promise<JobApplication[]> {
+  const collectionName = COLLECTIONS.JOB_APPLICATIONS;
+  try {
+    const colRef = collection(db, collectionName);
+    const snap = await getDocs(colRef);
+    const apps: JobApplication[] = [];
+    snap.forEach((doc) => {
+      apps.push({ id: doc.id, ...doc.data() } as JobApplication);
+    });
+    // Sort by appliedAt descending
+    apps.sort((a, b) => new Date(b.appliedAt || 0).getTime() - new Date(a.appliedAt || 0).getTime());
+    return apps;
+  } catch (error) {
+    console.warn("Could not retrieve job applications:", error);
+    return [];
+  }
+}
+
+export async function updateJobApplicationStatus(id: string, status: "new" | "reviewed" | "shortlisted" | "rejected"): Promise<void> {
+  const path = `${COLLECTIONS.JOB_APPLICATIONS}/${id}`;
+  try {
+    const docRef = doc(db, COLLECTIONS.JOB_APPLICATIONS, id);
+    await updateDoc(docRef, { status });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function deleteJobApplication(id: string): Promise<void> {
+  const path = `${COLLECTIONS.JOB_APPLICATIONS}/${id}`;
+  try {
+    const docRef = doc(db, COLLECTIONS.JOB_APPLICATIONS, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+// ----------------------------------------------------
 // DATABASE INITIALIZATION & SEEDING UTILITY
 // ----------------------------------------------------
 
@@ -358,6 +418,11 @@ export async function initializeDatabaseWithSeedData(): Promise<void> {
       await saveListItem(COLLECTIONS.AWARDS, item);
     }
 
+    // 12. Seed Jobs
+    for (const item of seed.DEFAULT_JOBS) {
+      await saveListItem(COLLECTIONS.JOBS, item);
+    }
+
     console.log("Firestore database successfully seeded!");
   } catch (error) {
     console.error("Seeding operation failed:", error);
@@ -381,7 +446,8 @@ export async function getAllContent() {
       gallery,
       news,
       faqs,
-      awards
+      awards,
+      jobs
     ] = await Promise.all([
       getHeroContent(),
       getAboutContent(),
@@ -396,7 +462,8 @@ export async function getAllContent() {
       getListItems<GalleryItem>(COLLECTIONS.GALLERY, seed.DEFAULT_GALLERY),
       getListItems<NewsItem>(COLLECTIONS.NEWS, seed.DEFAULT_NEWS),
       getListItems<FAQItem>(COLLECTIONS.FAQS, seed.DEFAULT_FAQ),
-      getListItems<AwardItem>(COLLECTIONS.AWARDS, seed.DEFAULT_AWARDS)
+      getListItems<AwardItem>(COLLECTIONS.AWARDS, seed.DEFAULT_AWARDS),
+      getListItems<JobPosting>(COLLECTIONS.JOBS, seed.DEFAULT_JOBS)
     ]);
 
     return {
@@ -413,7 +480,8 @@ export async function getAllContent() {
       gallery,
       news,
       faqs,
-      awards
+      awards,
+      jobs
     };
   } catch (err) {
     console.error("Error loading all content from Firestore:", err);

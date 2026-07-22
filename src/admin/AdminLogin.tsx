@@ -24,10 +24,6 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
     setIsLoading(true);
     try {
-      if (!auth) {
-        showToast("error", "ত্রুটি!", "Firebase API Key সেট করা নেই। .env ফাইলে VITE_FIREBASE_API_KEY যোগ করুন।");
-        return;
-      }
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       showToast("success", "লগইন সফল!", "এডমিন ড্যাশবোর্ডে স্বাগতম।");
       trackEvent("admin_login_success", { email });

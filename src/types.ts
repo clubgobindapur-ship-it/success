@@ -134,3 +134,34 @@ export interface ContactMessage {
   date: string;
   status: "new" | "read" | "replied";
 }
+
+export interface JobPosting {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  jobType: string; // e.g. "ফুল-টাইম", "পার্ট-টাইম", "চুক্তিভিত্তিক", "স্বেচ্ছাসেবক"
+  salary: string;
+  deadline: string;
+  description: string;
+  requirements: string[];
+  benefits?: string[];
+  isPublished: boolean;
+  order: number;
+  createdAt: string;
+}
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  applicantName: string;
+  phone: string;
+  email: string;
+  experience: string;
+  resumeUrl: string;
+  coverLetter: string;
+  appliedAt: string;
+  status: "new" | "reviewed" | "shortlisted" | "rejected";
+}
+

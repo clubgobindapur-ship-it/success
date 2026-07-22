@@ -14,6 +14,7 @@ import { Committee } from "./sections/Committee";
 import { StatsSection } from "./sections/StatsSection";
 import { GallerySection } from "./sections/GallerySection";
 import { NewsSection } from "./sections/NewsSection";
+import { CareerSection } from "./sections/CareerSection";
 import { FAQ } from "./sections/FAQ";
 import { Contact } from "./sections/Contact";
 import { AdminLogin } from "./admin/AdminLogin";
@@ -32,10 +33,49 @@ function MainAppContent() {
   const [isAdminRoute, setIsAdminRoute] = useState(false);
   const [adminUser, setAdminUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeHash, setActiveHash] = useState("#home");
+  const [activePath, setActivePath] = useState("/");
 
   // Core CMS data state
   const [cmsData, setCmsData] = useState<typeof SEED_DATA>({ ...SEED_DATA });
+
+  // Helper to scroll smoothly to a section element
+  const scrollToSection = (pathOrSection: string, smooth = true) => {
+    let sectionId = pathOrSection.startsWith("/") ? pathOrSection.slice(1) : pathOrSection;
+    sectionId = sectionId.replace("#", "");
+    if (!sectionId || sectionId === "home") sectionId = "home";
+
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+    }
+  };
+
+  // Process current location (path or hash)
+  const processRoute = (scroll = false) => {
+    let currentPath = window.location.pathname;
+
+    // Convert legacy hash (e.g., /#career or /#admin) to clean pathname (/career or /admin)
+    if (window.location.hash) {
+      const hashSection = window.location.hash.replace("#", "");
+      if (hashSection) {
+        currentPath = `/${hashSection}`;
+        window.history.replaceState({}, "", currentPath);
+      }
+    }
+
+    if (!currentPath || currentPath === "") currentPath = "/";
+    setActivePath(currentPath);
+
+    if (currentPath === "/admin" || currentPath === "/admin/") {
+      setIsAdminRoute(true);
+      trackEvent("admin_route_entered", { time: new Date().toISOString() });
+    } else {
+      setIsAdminRoute(false);
+      if (scroll) {
+        setTimeout(() => scrollToSection(currentPath, false), 100);
+      }
+    }
+  };
 
   // Load Data from Firestore on startup
   const fetchCMSData = async () => {
@@ -58,6 +98,7 @@ function MainAppContent() {
           gallery: data.gallery || prev.gallery,
           news: data.news || prev.news,
           faqs: data.faqs || prev.faqs,
+          jobs: data.jobs || prev.jobs,
           contact: data.contact || prev.contact,
           seo: data.seo || prev.seo
         }));
@@ -73,41 +114,30 @@ function MainAppContent() {
   useEffect(() => {
     fetchCMSData();
 
-    // Firebase Auth subscription (only when auth is available)
-    let unsubscribeAuth = () => {};
-    if (auth) {
-      unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-        if (user) {
-          setAdminUser(user);
-        } else {
-          setAdminUser(null);
-        }
-      });
-    }
-
-    // Hash change Router listener
-    const handleHashChange = () => {
-      const hash = window.location.hash || "#home";
-      setActiveHash(hash);
-      
-      if (hash === "#admin") {
-        setIsAdminRoute(true);
-        trackEvent("admin_route_entered", { time: new Date().toISOString() });
+    // Firebase Auth subscription
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setAdminUser(user);
       } else {
-        setIsAdminRoute(false);
+        setAdminUser(null);
       }
+    });
+
+    // Listen to browser Back/Forward navigation
+    const handlePopState = () => {
+      processRoute(true);
     };
 
-    // Initial check
-    handleHashChange();
-    window.addEventListener("hashchange", handleHashChange);
+    // Initial route check on page load
+    processRoute(true);
+    window.addEventListener("popstate", handlePopState);
 
     // Initial page view event
     trackEvent("page_view", { page_title: "Home", page_location: window.location.href });
 
     return () => {
       unsubscribeAuth();
-      window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("popstate", handlePopState);
     };
   }, []);
 
@@ -126,7 +156,7 @@ function MainAppContent() {
     }
   }, [isAdminRoute, cmsData.seo]);
 
-  // Scroll monitoring to automatically highlight the section currently in view
+  // Scroll monitoring (ScrollSpy) to dynamically update clean URL as user scrolls
   useEffect(() => {
     if (isAdminRoute) return;
 
@@ -141,9 +171,10 @@ function MainAppContent() {
         "committee",
         "gallery",
         "news",
+        "career",
         "contact"
       ];
-      const scrollPosition = window.scrollY + 180; // Trigger slightly earlier than the top edge
+      const scrollPosition = window.scrollY + 180;
 
       for (const sectionId of sections) {
         const el = document.getElementById(sectionId);
@@ -151,33 +182,53 @@ function MainAppContent() {
           const top = el.offsetTop;
           const height = el.offsetHeight;
           if (scrollPosition >= top && scrollPosition < top + height) {
-            setActiveHash(`#${sectionId}`);
+            const targetPath = sectionId === "home" ? "/" : `/${sectionId}`;
+            if (window.location.pathname !== targetPath && window.location.pathname !== "/admin") {
+              window.history.replaceState({}, "", targetPath);
+              setActivePath(targetPath);
+            }
             break;
           }
         }
       }
     };
 
-    window.addEventListener("scroll", handleScrollSpy);
+    window.addEventListener("scroll", handleScrollSpy, { passive: true });
     return () => window.removeEventListener("scroll", handleScrollSpy);
   }, [isAdminRoute]);
 
   // Logout Admin Handler
   const handleAdminLogout = async () => {
     try {
-      if (auth) await signOut(auth);
+      await signOut(auth);
       setAdminUser(null);
       showToast("success", "লগআউট সম্পন্ন!", "অ্যাডমিন সেশনটি নিরাপদে বন্ধ করা হয়েছে।");
-      window.location.hash = "#home";
+      window.history.pushState({}, "", "/");
+      setIsAdminRoute(false);
+      setActivePath("/");
     } catch (err) {
       showToast("error", "ত্রুটি!", "লগআউট করতে ব্যর্থ হয়েছে।");
     }
   };
 
-  // Nav scroll triggers
-  const handleNavigate = (hash: string) => {
-    setActiveHash(hash);
-    window.location.hash = hash;
+  // Nav click triggers
+  const handleNavigate = (pathOrHash: string) => {
+    let cleanPath = pathOrHash.startsWith("#") ? pathOrHash.replace("#", "/") : pathOrHash;
+    if (!cleanPath.startsWith("/")) cleanPath = "/" + cleanPath;
+    if (cleanPath === "/home") cleanPath = "/";
+
+    if (window.location.pathname !== cleanPath) {
+      window.history.pushState({}, "", cleanPath);
+    }
+    setActivePath(cleanPath);
+
+    if (cleanPath === "/admin" || cleanPath === "/admin/") {
+      setIsAdminRoute(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      setIsAdminRoute(false);
+      scrollToSection(cleanPath, true);
+    }
   };
 
   // Loading Screen
@@ -198,7 +249,7 @@ function MainAppContent() {
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
       {/* Header / Nav */}
       <Navbar
-        activeHash={activeHash}
+        activePath={activePath}
         onNavigate={handleNavigate}
         orgName="Success সমবায় সমিতি"
       />
@@ -258,6 +309,9 @@ function MainAppContent() {
 
             {/* 10. News & Board notices */}
             <NewsSection items={cmsData.news} />
+
+            {/* 10.5. Career & Job Openings */}
+            <CareerSection jobs={cmsData.jobs} />
 
             {/* 11. Frequently Asked Questions Accordions */}
             <FAQ faqs={cmsData.faqs} />

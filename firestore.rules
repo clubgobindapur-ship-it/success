@@ -83,8 +83,19 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /jobs/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Public contact submissions: Public can create, only logged-in administrators can read/update/delete
     match /contact_messages/{messageId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Public job applications: Public can create, only logged-in administrators can read/update/delete
+    match /job_applications/{appId} {
       allow create: if true;
       allow read, update, delete: if isAdmin();
     }

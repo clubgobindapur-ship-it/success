@@ -1,12 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { getFirestore, doc, getDocFromServer } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// ⚠️ Add your Firebase apiKey here. Get it from:
-// Firebase Console → Project Settings → Your apps → Web app → SDK setup and configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  apiKey: "AIzaSyBr6JeQWTjLHdgco3ncIet_YgC1HXZIj-Y",
   authDomain: "success-group-c58d5.firebaseapp.com",
   projectId: "success-group-c58d5",
   storageBucket: "success-group-c58d5.firebasestorage.app",
@@ -18,17 +16,10 @@ const firebaseConfig = {
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services — Auth requires a valid apiKey
+// Initialize Firebase services
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 export const storage = getStorage(app);
-
-let _auth: Auth | null = null;
-try {
-  _auth = getAuth(app);
-} catch (e) {
-  console.warn("Firebase Auth could not be initialized. Admin features will be disabled. Add VITE_FIREBASE_API_KEY to your .env file.");
-}
-export const auth = _auth;
 
 // Operational Types for Error Handlers
 export enum OperationType {
@@ -65,12 +56,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth?.currentUser?.uid,
-      email: auth?.currentUser?.email,
-      emailVerified: auth?.currentUser?.emailVerified,
-      isAnonymous: auth?.currentUser?.isAnonymous,
-      tenantId: auth?.currentUser?.tenantId,
-      providerInfo: auth?.currentUser?.providerData?.map(provider => ({
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
         providerId: provider.providerId,
         email: provider.email,
       })) || []

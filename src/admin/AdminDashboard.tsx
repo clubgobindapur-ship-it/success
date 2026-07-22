@@ -26,7 +26,12 @@ import {
   Menu,
   CheckCircle,
   ExternalLink,
-  Trophy
+  Trophy,
+  Briefcase,
+  UserCheck,
+  Filter,
+  Mail,
+  Award
 } from "lucide-react";
 import { useToast } from "../components/Toast";
 import { trackEvent } from "../utils/analytics";
@@ -47,7 +52,9 @@ import {
   ContactInfo,
   SEOMetadata,
   ContactMessage,
-  AwardItem
+  AwardItem,
+  JobPosting,
+  JobApplication
 } from "../types";
 
 interface AdminDashboardProps {
@@ -70,12 +77,13 @@ interface AdminDashboardProps {
     testimonials: TestimonialItem[];
     faqs: FAQItem[];
     awards: AwardItem[];
+    jobs?: JobPosting[];
     contact: ContactInfo;
     seo: SEOMetadata;
   };
 }
 
-type AdminTab = "hero" | "about" | "services" | "water" | "committee" | "gallery" | "news" | "faqs" | "contact" | "inquiries" | "awards";
+type AdminTab = "hero" | "about" | "services" | "water" | "committee" | "gallery" | "news" | "faqs" | "contact" | "inquiries" | "awards" | "career";
 
 export function AdminDashboard({ isDemo, onLogout, onRefreshData, initialState }: AdminDashboardProps) {
   const { showToast } = useToast();
@@ -102,6 +110,12 @@ export function AdminDashboard({ isDemo, onLogout, onRefreshData, initialState }
   const [news, setNews] = useState<NewsItem[]>([...initialState.news]);
   const [faqs, setFaqs] = useState<FAQItem[]>([...initialState.faqs]);
   const [awards, setAwards] = useState<AwardItem[]>([...(initialState.awards || [])]);
+  const [jobs, setJobs] = useState<JobPosting[]>([...(initialState.jobs || [])]);
+
+  // Career Sub-Tab state ("postings" | "applications")
+  const [careerSubTab, setCareerSubTab] = useState<"postings" | "applications">("postings");
+  const [jobApplications, setJobApplications] = useState<JobApplication[]>([]);
+  const [isLoadingJobApps, setIsLoadingJobApps] = useState(false);
 
   // Contact messages loaded from DB
   const [inquiries, setInquiries] = useState<ContactMessage[]>([]);
@@ -120,6 +134,8 @@ export function AdminDashboard({ isDemo, onLogout, onRefreshData, initialState }
   const [editFAQ, setEditFAQ] = useState<Partial<FAQItem> | null>(null);
   const [editStat, setEditStat] = useState<Partial<StatItem> | null>(null);
   const [editAward, setEditAward] = useState<Partial<AwardItem> | null>(null);
+  const [editJob, setEditJob] = useState<Partial<JobPosting> | null>(null);
+  const [viewAppDetail, setViewAppDetail] = useState<JobApplication | null>(null);
 
   // Load live contact inquiries from firestore
   const fetchInquiries = async () => {
@@ -134,9 +150,25 @@ export function AdminDashboard({ isDemo, onLogout, onRefreshData, initialState }
     }
   };
 
+  // Load live job applications from firestore
+  const fetchJobApplications = async () => {
+    setIsLoadingJobApps(true);
+    try {
+      const apps = await dbService.getJobApplications();
+      setJobApplications(apps);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingJobApps(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === "inquiries") {
       fetchInquiries();
+    }
+    if (activeTab === "career") {
+      fetchJobApplications();
     }
   }, [activeTab]);
 
@@ -526,6 +558,85 @@ export function AdminDashboard({ isDemo, onLogout, onRefreshData, initialState }
     }
   };
 
+  // 8. CAREER / JOB POSTINGS
+  const handleSaveJob = async () => {
+    if (!editJob?.title || !editJob?.department || !editJob?.location || !editJob?.salary || !editJob?.deadline || !editJob?.description) {
+      showToast("error", "তথ্য অসম্পূর্ণ!", "দয়া করে প্রয়োজনীয় সকল ঘর পূরণ করুন।");
+      return;
+    }
+    const id = editJob.id || `job-${Date.now()}`;
+    const newJob: JobPosting = {
+      id,
+      title: editJob.title,
+      department: editJob.department,
+      location: editJob.location,
+      jobType: editJob.jobType || "ফুল-টাইম",
+      salary: editJob.salary,
+      deadline: editJob.deadline,
+      description: editJob.description,
+      requirements: Array.isArray(editJob.requirements)
+        ? editJob.requirements
+        : typeof editJob.requirements === "string"
+        ? (editJob.requirements as string).split("\n").filter((s) => s.trim())
+        : [],
+      benefits: Array.isArray(editJob.benefits)
+        ? editJob.benefits
+        : typeof editJob.benefits === "string"
+        ? (editJob.benefits as string).split("\n").filter((s) => s.trim())
+        : [],
+      isPublished: editJob.isPublished !== undefined ? editJob.isPublished : true,
+      order: editJob.order !== undefined ? Number(editJob.order) : jobs.length + 1
+    };
+
+    try {
+      if (!isDemo) await dbService.saveListItem(dbService.COLLECTIONS.JOBS, newJob);
+      setJobs((prev) => {
+        const filtered = prev.filter((x) => x.id !== id);
+        return [...filtered, newJob].sort((a, b) => a.order - b.order);
+      });
+      setEditJob(null);
+      showToast("success", "বিজ্ঞপ্তি সংরক্ষিত!", "চাকরির সার্কুলারটি সফলভাবে সংরক্ষণ করা হয়েছে।");
+      onRefreshData();
+    } catch (err) {
+      showToast("error", "ব্যর্থ!", "বিজ্ঞপ্তি সংরক্ষণ করতে সমস্যা হয়েছে।");
+    }
+  };
+
+  const handleDeleteJob = async (id: string) => {
+    if (!window.confirm("আপনি কি নিশ্চিতভাবে এই চাকরির বিজ্ঞপ্তিটি মুছে ফেলতে চান?")) return;
+    try {
+      if (!isDemo) await dbService.deleteListItem(dbService.COLLECTIONS.JOBS, id);
+      setJobs((prev) => prev.filter((x) => x.id !== id));
+      showToast("success", "বিজ্ঞপ্তি মুছে ফেলা হয়েছে!", "চাকরির সার্কুলারটি তালিকা থেকে মুছে ফেলা হয়েছে।");
+      onRefreshData();
+    } catch (err) {
+      showToast("error", "ব্যর্থ!", "মুছে ফেলতে সমস্যা হয়েছে।");
+    }
+  };
+
+  const handleUpdateJobAppStatus = async (id: string, status: "new" | "reviewed" | "shortlisted" | "rejected") => {
+    try {
+      if (!isDemo) await dbService.updateJobApplicationStatus(id, status);
+      setJobApplications((prev) =>
+        prev.map((app) => (app.id === id ? { ...app, status } : app))
+      );
+      showToast("success", "স্ট্যাটাস আপডেট করা হয়েছে!", `আবেদনের স্ট্যাটাস পরিবর্তিত হয়েছে।`);
+    } catch (err) {
+      showToast("error", "ব্যর্থ!", "স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে।");
+    }
+  };
+
+  const handleDeleteJobApp = async (id: string) => {
+    if (!window.confirm("আপনি কি নিশ্চিতভাবে এই আবেদনটি মুছে ফেলতে চান?")) return;
+    try {
+      if (!isDemo) await dbService.deleteJobApplication(id);
+      setJobApplications((prev) => prev.filter((app) => app.id !== id));
+      showToast("success", "আবেদন মুছে ফেলা হয়েছে!", "আবেদনটি সফলভাবে মুছে ফেলা হয়েছে।");
+    } catch (err) {
+      showToast("error", "ব্যর্থ!", "মুছে ফেলতে সমস্যা হয়েছে।");
+    }
+  };
+
   // ----------------------------------------------------
   // INQUIRIES WORKFLOWS
   // ----------------------------------------------------
@@ -718,6 +829,21 @@ export function AdminDashboard({ isDemo, onLogout, onRefreshData, initialState }
             >
               <Trophy size={16} />
               <span>অর্জন ও সম্মাননা</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab("career"); setSearchQuery(""); }}
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-between transition cursor-pointer ${
+                activeTab === "career" ? "bg-teal-50 text-teal-700" : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Briefcase size={16} />
+                <span>ক্যারিয়ার ও নিয়োগ</span>
+              </div>
+              <span className="bg-teal-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {jobs.length}
+              </span>
             </button>
 
             <button
@@ -1960,90 +2086,552 @@ export function AdminDashboard({ isDemo, onLogout, onRefreshData, initialState }
               </form>
             )}
 
-            {/* 10. INQUIRIES TAB (CONTACT MESSAGES READER) */}
-            {activeTab === "inquiries" && (
+            {/* 11. CAREER & JOB POSTINGS TAB */}
+            {activeTab === "career" && (
               <div className="flex flex-col gap-6">
-                <div className="flex items-center justify-between border-b pb-3 mb-2">
-                  <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
-                    <MessageSquare size={18} className="text-teal-600" />
-                    <span>যোগাযোগ ফরম থেকে প্রাপ্ত ইনকোয়ারিসমূহের তালিকা</span>
-                  </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                  <div>
+                    <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                      <Briefcase size={20} className="text-brand-teal" />
+                      <span>ক্যারিয়ার ও নিয়োগ ব্যবস্থাপনা</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      চাকরির নতুন সার্কুলার প্রকাশ করুন এবং আবেদনকারীদের রেজিষ্ট্রেশন ও বায়োডাটা রিভিউ করুন।
+                    </p>
+                  </div>
                   <button
-                    onClick={fetchInquiries}
-                    disabled={isLoadingInquiries}
-                    className="px-3.5 py-1.5 rounded-xl border hover:bg-slate-50 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                    onClick={fetchJobApplications}
+                    disabled={isLoadingJobApps}
+                    className="px-3.5 py-2 rounded-xl border hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
                   >
-                    {isLoadingInquiries ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database size={14} />}
-                    <span>রিফ্রেশ</span>
+                    {isLoadingJobApps ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database size={14} />}
+                    <span>আবেদন রিফ্রেশ</span>
                   </button>
                 </div>
 
-                {/* Filter and Table Grid */}
-                <div className="relative">
-                  <div className="absolute left-3 top-3.5 text-slate-400"><Search size={16} /></div>
-                  <input
-                    type="text"
-                    placeholder="বার্তার বিষয়বস্তু বা প্রেরকের নাম দিয়ে খুঁজুন..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-xs sm:text-sm bg-slate-50"
-                  />
+                {/* Stat Counters Bar */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">মোট সার্কুলার</span>
+                    <span className="text-xl font-extrabold text-slate-800">{jobs.length} টি</span>
+                  </div>
+                  <div className="bg-teal-50/50 border border-teal-100 p-3.5 rounded-2xl">
+                    <span className="text-[10px] uppercase font-bold text-teal-600 block">সক্রিয় সার্কুলার</span>
+                    <span className="text-xl font-extrabold text-teal-700">{jobs.filter((j) => j.isPublished).length} টি</span>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">মোট প্রাপ্ত আবেদন</span>
+                    <span className="text-xl font-extrabold text-slate-800">{jobApplications.length} টি</span>
+                  </div>
+                  <div className="bg-rose-50/50 border border-rose-100 p-3.5 rounded-2xl">
+                    <span className="text-[10px] uppercase font-bold text-rose-600 block">নতুন আবেদন</span>
+                    <span className="text-xl font-extrabold text-rose-700">{jobApplications.filter((a) => a.status === "new").length} টি</span>
+                  </div>
                 </div>
 
-                {isLoadingInquiries ? (
-                  <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2">
-                    <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-                    <p className="text-sm font-sans">ইনকোয়ারি ডেটা লোড হচ্ছে...</p>
-                  </div>
-                ) : filteredInquiries.length === 0 ? (
-                  <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2 border-2 border-dashed border-slate-100 rounded-3xl">
-                    <MessageSquare size={36} className="opacity-30" />
-                    <p className="text-sm font-sans">কোনো বার্তা পাওয়া যায়নি।</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {filteredInquiries.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`p-5 rounded-2xl border transition ${
-                          msg.status === "new" ? "border-teal-200 bg-teal-50/10" : "border-slate-100 bg-white"
-                        }`}
+                {/* Sub Tab Switcher */}
+                <div className="flex border-b border-slate-200 gap-6">
+                  <button
+                    onClick={() => setCareerSubTab("postings")}
+                    className={`pb-3 text-xs sm:text-sm font-bold transition border-b-2 cursor-pointer flex items-center gap-2 ${
+                      careerSubTab === "postings"
+                        ? "border-brand-teal text-brand-teal"
+                        : "border-transparent text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <FileText size={16} />
+                    <span>চাকরির সার্কুলার তালিকা ({jobs.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setCareerSubTab("applications")}
+                    className={`pb-3 text-xs sm:text-sm font-bold transition border-b-2 cursor-pointer flex items-center gap-2 relative ${
+                      careerSubTab === "applications"
+                        ? "border-brand-teal text-brand-teal"
+                        : "border-transparent text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <UserCheck size={16} />
+                    <span>প্রাপ্ত আবেদনসমূহ ({jobApplications.length})</span>
+                    {jobApplications.filter((a) => a.status === "new").length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold animate-pulse">
+                        {jobApplications.filter((a) => a.status === "new").length} New
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* ---------------------------------------------------- */}
+                {/* SUB TAB 1: JOB POSTINGS MANAGEMENT */}
+                {/* ---------------------------------------------------- */}
+                {careerSubTab === "postings" && (
+                  <div className="flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="relative w-full sm:w-72">
+                        <Search size={16} className="absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="সার্কুলার খুঁজুন..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border rounded-xl text-xs bg-slate-50"
+                        />
+                      </div>
+                      <button
+                        onClick={() =>
+                          setEditJob({
+                            title: "",
+                            department: "মাঠ পর্যায় অপারেশন",
+                            location: "গোবিন্দপুর, চাঁদপুর",
+                            jobType: "ফুল-টাইম",
+                            salary: "আলোচনা সাপেক্ষে",
+                            deadline: new Date(Date.now() + 15 * 86400000).toISOString().split("T")[0],
+                            description: "",
+                            requirements: [],
+                            benefits: [],
+                            isPublished: true,
+                            order: jobs.length + 1
+                          })
+                        }
+                        className="px-4 py-2 bg-brand-teal hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer w-full sm:w-auto justify-center"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100/60 pb-3 mb-3">
+                        <Plus size={15} />
+                        <span>নতুন সার্কুলার যোগ করুন</span>
+                      </button>
+                    </div>
+
+                    {/* Edit/Create Job Modal */}
+                    {editJob && (
+                      <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col gap-4">
+                        <h3 className="font-bold text-sm text-slate-800 flex items-center justify-between">
+                          <span>{editJob.id ? "চাকরির সার্কুলার এডিট করুন" : "নতুন চাকরির সার্কুলার তৈরি করুন"}</span>
+                          <button onClick={() => setEditJob(null)} className="text-slate-400 hover:text-slate-600">
+                            <X size={16} />
+                          </button>
+                        </h3>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                           <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-slate-950 text-sm">{msg.name}</h4>
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                                msg.status === "new"
-                                  ? "bg-rose-50 text-rose-700 border border-rose-100"
-                                  : msg.status === "read"
-                                  ? "bg-blue-50 text-blue-700 border border-blue-100"
-                                  : "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                              }`}>
-                                {msg.status === "new" ? "New" : msg.status === "read" ? "Read" : "Replied"}
-                              </span>
-                            </div>
-                            <p className="text-slate-400 text-[10px] mt-1">মোবাইল: <strong className="text-slate-700 select-all">{msg.phone}</strong> | ইমেইল: <strong className="text-slate-700 select-all">{msg.email || "N/A"}</strong></p>
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">পদের নাম / টাইটেল *</label>
+                            <input
+                              type="text"
+                              placeholder="যেমন: ফিল্ড অফিসার (ঋণ ও সঞ্চয়)"
+                              value={editJob.title || ""}
+                              onChange={(e) => setEditJob({ ...editJob, title: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-xl bg-white"
+                            />
                           </div>
-                          
-                          <span className="text-[10px] text-slate-400 self-start sm:self-auto font-mono">
-                            {new Date(msg.date).toLocaleString("bn-BD", { hour12: true })}
-                          </span>
+
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">বিভাগ / ডিপার্টমেন্ট *</label>
+                            <input
+                              type="text"
+                              placeholder="যেমন: মাঠ পর্যায় অপারেশন"
+                              value={editJob.department || ""}
+                              onChange={(e) => setEditJob({ ...editJob, department: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-xl bg-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">কর্মস্থল / স্থান *</label>
+                            <input
+                              type="text"
+                              placeholder="যেমন: গোবিন্দপুর, চাঁদপুর"
+                              value={editJob.location || ""}
+                              onChange={(e) => setEditJob({ ...editJob, location: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-xl bg-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">চাকরির ধরণ (Job Type) *</label>
+                            <select
+                              value={editJob.jobType || "ফুল-টাইম"}
+                              onChange={(e) => setEditJob({ ...editJob, jobType: e.target.value as any })}
+                              className="w-full px-3 py-2 border rounded-xl bg-white"
+                            >
+                              <option value="ফুল-টাইম">ফুল-টাইম (Full-time)</option>
+                              <option value="পার্ট-টাইম">পার্ট-টাইম (Part-time)</option>
+                              <option value="স্বেচ্ছাসেবক">স্বেচ্ছাসেবক (Volunteer)</option>
+                              <option value="চুক্তিভিত্তিক">চুক্তিভিত্তিক (Contractual)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">বেতন / সম্মানী *</label>
+                            <input
+                              type="text"
+                              placeholder="যেমন: ১৫,০০০ - ২০,০০০ টাকা"
+                              value={editJob.salary || ""}
+                              onChange={(e) => setEditJob({ ...editJob, salary: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-xl bg-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">আবেদনের শেষ তারিখ *</label>
+                            <input
+                              type="date"
+                              value={editJob.deadline || ""}
+                              onChange={(e) => setEditJob({ ...editJob, deadline: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-xl bg-white"
+                            />
+                          </div>
                         </div>
 
-                        <p className="text-slate-700 text-xs sm:text-sm leading-relaxed mb-4 font-sans whitespace-pre-line text-justify select-text">
-                          {msg.message}
-                        </p>
+                        <div className="text-xs">
+                          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">পদের বিবরণ ও দায়িত্বসমূহ *</label>
+                          <textarea
+                            rows={3}
+                            placeholder="পদের সংক্ষিপ্ত বিবরণ ও দায়িত্বাবলি লিখুন..."
+                            value={editJob.description || ""}
+                            onChange={(e) => setEditJob({ ...editJob, description: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-xl bg-white"
+                          />
+                        </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-50 text-xs">
-                          <div className="flex gap-2">
-                            <button onClick={() => handleToggleInquiryStatus(msg, "read")} className="px-3 py-1 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition">পঠিত হিসেবে মার্ক</button>
-                            <button onClick={() => handleToggleInquiryStatus(msg, "replied")} className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition">উত্তর দেওয়া হয়েছে</button>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                              আবশ্যকীয় যোগ্যতা (প্রতি লাইনে ১টি করে)
+                            </label>
+                            <textarea
+                              rows={3}
+                              placeholder="এইচএসসি / স্নাতক পাস&#10;মোবাইল ব্যবহারে পারদর্শী&#10;১ বছরের অভিজ্ঞতা"
+                              value={
+                                Array.isArray(editJob.requirements)
+                                  ? editJob.requirements.join("\n")
+                                  : editJob.requirements || ""
+                              }
+                              onChange={(e) => setEditJob({ ...editJob, requirements: e.target.value as any })}
+                              className="w-full px-3 py-2 border rounded-xl bg-white"
+                            />
                           </div>
-                          <button onClick={() => handleDeleteInquiry(msg.id)} className="p-1.5 hover:bg-rose-50 rounded text-rose-500 transition" title="বার্তা ডিলিট"><Trash size={14} /></button>
+
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                              সুবিধাসমূহ (প্রতি লাইনে ১টি করে)
+                            </label>
+                            <textarea
+                              rows={3}
+                              placeholder="উৎসব বোনাস&#10;যাতায়াত ভাতা&#10;বার্ষিক ইনক্রিমেন্ট"
+                              value={
+                                Array.isArray(editJob.benefits)
+                                  ? editJob.benefits.join("\n")
+                                  : editJob.benefits || ""
+                              }
+                              onChange={(e) => setEditJob({ ...editJob, benefits: e.target.value as any })}
+                              className="w-full px-3 py-2 border rounded-xl bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-4 text-xs pt-2">
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={editJob.isPublished ?? true}
+                                onChange={(e) => setEditJob({ ...editJob, isPublished: e.target.checked })}
+                                className="w-4 h-4 rounded text-brand-teal focus:ring-brand-teal"
+                              />
+                              <span>ওয়েবসাইটে প্রকাশ্যে দেখাবে (Published)</span>
+                            </label>
+                            <div>
+                              <span className="text-[11px] font-bold uppercase text-slate-500 mr-2">ক্রম:</span>
+                              <input
+                                type="number"
+                                value={editJob.order || 1}
+                                onChange={(e) => setEditJob({ ...editJob, order: Number(e.target.value) })}
+                                className="w-16 px-2 py-1 border rounded-lg text-xs bg-white inline-block"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setEditJob(null)}
+                              className="px-4 py-2 border rounded-xl text-xs font-semibold hover:bg-slate-100"
+                            >
+                              বাতিল
+                            </button>
+                            <button
+                              onClick={handleSaveJob}
+                              className="px-5 py-2 bg-brand-teal hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+                            >
+                              <Save size={14} />
+                              <span>সংরক্ষণ করুন</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Job Postings Table */}
+                    {jobs.length === 0 ? (
+                      <div className="py-12 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                        <p className="text-sm">কোনো সার্কুলার তৈরি করা হয়নি। উপরের বোতামে ক্লিক করে তৈরি করুন।</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
+                        <table className="w-full text-left text-xs text-slate-700 bg-white">
+                          <thead className="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 border-b">
+                            <tr>
+                              <th className="p-3.5">পদের নাম ও বিভাগ</th>
+                              <th className="p-3.5">টাইপ ও বেতন</th>
+                              <th className="p-3.5">আবেদনের শেষ তারিখ</th>
+                              <th className="p-3.5 text-center">স্ট্যাটাস</th>
+                              <th className="p-3.5 text-right">অ্যাকশন</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {jobs
+                              .filter(
+                                (j) =>
+                                  !searchQuery ||
+                                  j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  j.department.toLowerCase().includes(searchQuery.toLowerCase())
+                              )
+                              .map((job) => (
+                                <tr key={job.id} className="hover:bg-slate-50/80 transition">
+                                  <td className="p-3.5">
+                                    <span className="font-bold text-slate-900 block text-sm">{job.title}</span>
+                                    <span className="text-[11px] text-teal-700 font-semibold">{job.department} • {job.location}</span>
+                                  </td>
+                                  <td className="p-3.5">
+                                    <span className="font-semibold block">{job.salary}</span>
+                                    <span className="text-[10px] text-slate-500">{job.jobType}</span>
+                                  </td>
+                                  <td className="p-3.5 font-medium text-rose-600">
+                                    {job.deadline}
+                                  </td>
+                                  <td className="p-3.5 text-center">
+                                    <span
+                                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                        job.isPublished
+                                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                          : "bg-slate-100 text-slate-500 border border-slate-200"
+                                      }`}
+                                    >
+                                      {job.isPublished ? "পাবলিশড" : "খসড়া (Draft)"}
+                                    </span>
+                                  </td>
+                                  <td className="p-3.5 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        onClick={() => setEditJob(job)}
+                                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition"
+                                        title="এডিট"
+                                      >
+                                        <Edit size={15} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteJob(job.id)}
+                                        className="p-1.5 hover:bg-rose-50 rounded-lg text-rose-500 transition"
+                                        title="ডিলিট"
+                                      >
+                                        <Trash size={15} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ---------------------------------------------------- */}
+                {/* SUB TAB 2: JOB APPLICATIONS READER */}
+                {/* ---------------------------------------------------- */}
+                {careerSubTab === "applications" && (
+                  <div className="flex flex-col gap-6">
+                    <div className="relative w-full sm:w-80">
+                      <Search size={16} className="absolute left-3 top-3 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="আবেদনকারীর নাম বা মোবাইল দিয়ে খুঁজুন..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 border rounded-xl text-xs bg-slate-50"
+                      />
+                    </div>
+
+                    {isLoadingJobApps ? (
+                      <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2">
+                        <Loader2 className="w-8 h-8 animate-spin text-brand-teal" />
+                        <p className="text-sm font-sans">আবেদনসমূহ লোড করা হচ্ছে...</p>
+                      </div>
+                    ) : jobApplications.length === 0 ? (
+                      <div className="py-16 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center gap-2">
+                        <UserCheck size={36} className="opacity-30" />
+                        <p className="text-sm">এখনো কোনো আবেদন জমা হয়নি।</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
+                        <table className="w-full text-left text-xs text-slate-700 bg-white">
+                          <thead className="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 border-b">
+                            <tr>
+                              <th className="p-3.5">আবেদনকারীর নাম ও পদ</th>
+                              <th className="p-3.5">যোগাযোগের নম্বর</th>
+                              <th className="p-3.5">যোগ্যতা ও তারিখ</th>
+                              <th className="p-3.5 text-center">স্ট্যাটাস</th>
+                              <th className="p-3.5 text-right">অ্যাকশন</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {jobApplications
+                              .filter(
+                                (app) =>
+                                  !searchQuery ||
+                                  app.applicantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  app.phone.includes(searchQuery) ||
+                                  app.jobTitle.toLowerCase().includes(searchQuery.toLowerCase())
+                              )
+                              .map((app) => (
+                                <tr key={app.id} className="hover:bg-slate-50/80 transition">
+                                  <td className="p-3.5">
+                                    <span className="font-bold text-slate-900 block text-sm">{app.applicantName}</span>
+                                    <span className="text-[11px] text-brand-teal font-semibold">আবেদনকৃত পদ: {app.jobTitle}</span>
+                                  </td>
+                                  <td className="p-3.5">
+                                    <span className="font-semibold text-slate-800 block">{app.phone}</span>
+                                    <span className="text-[10px] text-slate-500">{app.email || "ইমেইল প্রদান করা হয়নি"}</span>
+                                  </td>
+                                  <td className="p-3.5">
+                                    <span className="block truncate max-w-xs">{app.experience}</span>
+                                    <span className="text-[10px] text-slate-400">{app.appliedAt}</span>
+                                  </td>
+                                  <td className="p-3.5 text-center">
+                                    <select
+                                      value={app.status || "new"}
+                                      onChange={(e) => handleUpdateJobAppStatus(app.id, e.target.value as any)}
+                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border cursor-pointer ${
+                                        app.status === "new"
+                                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                                          : app.status === "reviewed"
+                                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                                          : app.status === "shortlisted"
+                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                          : "bg-slate-100 text-slate-600 border-slate-200"
+                                      }`}
+                                    >
+                                      <option value="new">নতুন (New)</option>
+                                      <option value="reviewed">রিভিউড (Reviewed)</option>
+                                      <option value="shortlisted">শর্টলিস্টেড (Shortlisted)</option>
+                                      <option value="rejected">বাতিল (Rejected)</option>
+                                    </select>
+                                  </td>
+                                  <td className="p-3.5 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      {app.resumeUrl && (
+                                        <a
+                                          href={app.resumeUrl}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-[10px] font-bold flex items-center gap-1"
+                                          title="সিভি লিঙ্ক খুলুন"
+                                        >
+                                          <ExternalLink size={12} />
+                                          <span>CV</span>
+                                        </a>
+                                      )}
+                                      <button
+                                        onClick={() => setViewAppDetail(app)}
+                                        className="px-2.5 py-1 bg-brand-teal/10 hover:bg-brand-teal hover:text-white text-brand-teal rounded-lg font-bold text-[11px] transition"
+                                      >
+                                        বিস্তারিত
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteJobApp(app.id)}
+                                        className="p-1.5 hover:bg-rose-50 rounded-lg text-rose-500 transition"
+                                        title="ডিলিট"
+                                      >
+                                        <Trash size={15} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Applicant Detail View Modal */}
+                    {viewAppDetail && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                        <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+                          <button
+                            onClick={() => setViewAppDetail(null)}
+                            className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700"
+                          >
+                            <X size={18} />
+                          </button>
+
+                          <div className="border-b pb-3 mb-4">
+                            <span className="px-2.5 py-0.5 bg-teal-50 text-teal-700 text-[10px] font-bold rounded">
+                              {viewAppDetail.jobTitle}
+                            </span>
+                            <h3 className="text-xl font-bold text-slate-900 mt-1">{viewAppDetail.applicantName}</h3>
+                            <p className="text-xs text-slate-500">
+                              আবেদনের তারিখ: {viewAppDetail.appliedAt}
+                            </p>
+                          </div>
+
+                          <div className="space-y-3 text-xs">
+                            <div className="p-3 bg-slate-50 rounded-xl space-y-1">
+                              <p><strong>মোবাইল নম্বর:</strong> <a href={`tel:${viewAppDetail.phone}`} className="text-brand-teal font-bold hover:underline">{viewAppDetail.phone}</a></p>
+                              <p><strong>ইমেইল:</strong> {viewAppDetail.email || "N/A"}</p>
+                              <p><strong>যোগ্যতা ও অভিজ্ঞতা:</strong> {viewAppDetail.experience}</p>
+                              {viewAppDetail.resumeUrl && (
+                                <p className="pt-1">
+                                  <strong>সিভি লিঙ্ক: </strong>
+                                  <a href={viewAppDetail.resumeUrl} target="_blank" rel="noreferrer" className="text-brand-teal font-bold underline">
+                                    {viewAppDetail.resumeUrl}
+                                  </a>
+                                </p>
+                              )}
+                            </div>
+
+                            {viewAppDetail.coverLetter && (
+                              <div>
+                                <h4 className="font-bold text-slate-800 mb-1">কভার লেটার / বার্তা:</h4>
+                                <p className="p-3 bg-slate-50 rounded-xl text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                  {viewAppDetail.coverLetter}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="mt-6 pt-3 border-t flex justify-between items-center">
+                            <select
+                              value={viewAppDetail.status || "new"}
+                              onChange={(e) => {
+                                const newSt = e.target.value as any;
+                                handleUpdateJobAppStatus(viewAppDetail.id, newSt);
+                                setViewAppDetail({ ...viewAppDetail, status: newSt });
+                              }}
+                              className="px-3 py-1.5 border rounded-xl text-xs font-bold bg-white"
+                            >
+                              <option value="new">স্ট্যাটাস: নতুন (New)</option>
+                              <option value="reviewed">স্ট্যাটাস: রিভিউড (Reviewed)</option>
+                              <option value="shortlisted">স্ট্যাটাস: শর্টলিস্টেড (Shortlisted)</option>
+                              <option value="rejected">স্ট্যাটাস: বাতিল (Rejected)</option>
+                            </select>
+
+                            <button
+                              onClick={() => setViewAppDetail(null)}
+                              className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+                            >
+                              বন্ধ করুন
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

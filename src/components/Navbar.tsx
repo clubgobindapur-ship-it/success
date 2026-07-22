@@ -4,12 +4,12 @@ import { trackEvent } from "../utils/analytics";
 import { motion, AnimatePresence } from "motion/react";
 
 interface NavbarProps {
-  activeHash: string;
-  onNavigate: (hash: string) => void;
+  activePath: string;
+  onNavigate: (path: string) => void;
   orgName: string;
 }
 
-export function Navbar({ activeHash, onNavigate, orgName }: NavbarProps) {
+export function Navbar({ activePath, onNavigate, orgName }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -27,45 +27,43 @@ export function Navbar({ activeHash, onNavigate, orgName }: NavbarProps) {
   }, []);
 
   const navLinks = [
-    { label: "হোম", hash: "#home" },
-    { label: "আমাদের সম্পর্কে", hash: "#about" },
-    { label: "সেবা সমূহ", hash: "#services" },
-    { label: "বিশুদ্ধ পানি প্রকল্প", hash: "#water" },
-    { label: "সামাজিক কার্যক্রম", hash: "#social" },
-    { label: "অর্জন ও সম্মাননা", hash: "#awards" },
-    { label: "পরিচালনা কমিটি", hash: "#committee" },
-    { label: "গ্যালারি", hash: "#gallery" },
-    { label: "খবর ও নোটিশ", hash: "#news" },
-    { label: "যোগাযোগ", hash: "#contact" }
+    { label: "হোম", path: "/" },
+    { label: "আমাদের সম্পর্কে", path: "/about" },
+    { label: "সেবা সমূহ", path: "/services" },
+    { label: "বিশুদ্ধ পানি প্রকল্প", path: "/water" },
+    { label: "সামাজিক কার্যক্রম", path: "/social" },
+    { label: "অর্জন ও সম্মাননা", path: "/awards" },
+    { label: "পরিচালনা কমিটি", path: "/committee" },
+    { label: "গ্যালারি", path: "/gallery" },
+    { label: "খবর ও নোটিশ", path: "/news" },
+    { label: "ক্যারিয়ার", path: "/career" },
+    { label: "যোগাযোগ", path: "/contact" }
   ];
 
-  const handleLinkClick = (hash: string, label: string) => {
+  const handleLinkClick = (path: string, label: string) => {
     setIsMobileMenuOpen(false);
-    onNavigate(hash);
+    onNavigate(path);
     
     // Log Navigation click in GA4
     trackEvent("navigation_click", {
-      targetHash: hash,
+      targetPath: path,
       linkLabel: label,
       device: window.innerWidth < 768 ? "mobile" : "desktop"
     });
-
-    // Smooth scroll to element
-    const element = document.getElementById(hash.replace("#", ""));
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
 
-  const isLinkActive = (hash: string) => {
-    return activeHash === hash;
+  const isLinkActive = (path: string) => {
+    if (path === "/" || path === "/home") {
+      return activePath === "/" || activePath === "/home" || activePath === "";
+    }
+    return activePath === path || activePath === `#${path.replace("/", "")}`;
   };
 
   return (
     <>
       <nav
         className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 font-sans ${
-          isScrolled || activeHash === "#admin"
+          isScrolled || activePath === "/admin"
             ? "bg-white/90 backdrop-blur-md shadow-sm py-3 text-slate-800 border-b border-slate-200"
             : "bg-gradient-to-b from-black/60 to-transparent py-5 text-white"
         }`}
@@ -73,11 +71,11 @@ export function Navbar({ activeHash, onNavigate, orgName }: NavbarProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Logo & Org Name */}
           <button
-            onClick={() => handleLinkClick("#home", "Logo Home")}
+            onClick={() => handleLinkClick("/", "Logo Home")}
             className="flex items-center gap-2 group text-left cursor-pointer focus:outline-none"
           >
             <div className={`p-1.5 rounded-xl transition ${
-              isScrolled || activeHash === "#admin" ? "bg-brand-teal/10 text-brand-teal" : "bg-white/10 text-white"
+              isScrolled || activePath === "/admin" ? "bg-brand-teal/10 text-brand-teal" : "bg-white/10 text-white"
             }`}>
               <ShieldCheck size={26} className="group-hover:scale-105 transition duration-300" />
             </div>
@@ -86,7 +84,7 @@ export function Navbar({ activeHash, onNavigate, orgName }: NavbarProps) {
                 {orgName || "Success সমবায় সমিতি"}
               </span>
               <span className={`block text-[10px] uppercase tracking-widest ${
-                isScrolled || activeHash === "#admin" ? "text-slate-400" : "text-white/80"
+                isScrolled || activePath === "/admin" ? "text-slate-400" : "text-white/80"
               }`}>
                 Success Group এর সহযোগী
               </span>
@@ -97,20 +95,20 @@ export function Navbar({ activeHash, onNavigate, orgName }: NavbarProps) {
           <div className="hidden lg:flex items-center gap-1.5 xl:gap-2">
             {navLinks.map((link) => (
               <button
-                key={link.hash}
-                onClick={() => handleLinkClick(link.hash, link.label)}
+                key={link.path}
+                onClick={() => handleLinkClick(link.path, link.label)}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition cursor-pointer relative ${
-                  isLinkActive(link.hash)
-                    ? isScrolled || activeHash === "#admin"
+                  isLinkActive(link.path)
+                    ? isScrolled || activePath === "/admin"
                       ? "text-brand-teal bg-brand-teal/10"
                       : "text-white bg-white/20"
-                    : isScrolled || activeHash === "#admin"
+                    : isScrolled || activePath === "/admin"
                     ? "text-slate-600 hover:text-brand-teal hover:bg-slate-50"
                     : "text-white/80 hover:text-white hover:bg-white/10"
                 }`}
               >
                 {link.label}
-                {isLinkActive(link.hash) && (
+                {isLinkActive(link.path) && (
                   <motion.div
                     layoutId="activeIndicator"
                     className={`absolute bottom-0.5 left-3 right-3 h-0.5 rounded-full ${
@@ -128,7 +126,7 @@ export function Navbar({ activeHash, onNavigate, orgName }: NavbarProps) {
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`p-2 rounded-lg transition cursor-pointer ${
-                isScrolled || activeHash === "#admin"
+                isScrolled || activePath === "/admin"
                   ? "text-slate-700 hover:bg-slate-100"
                   : "text-white hover:bg-white/10"
               }`}
@@ -142,7 +140,7 @@ export function Navbar({ activeHash, onNavigate, orgName }: NavbarProps) {
       {/* CSS injection specifically for styling the logo text green if not scrolled, but white if scrolling */}
       <style>{`
         .dynamic-logo-text {
-          color: ${isScrolled || activeHash === '#admin' ? '#0F766E' : '#FFFFFF'} !important;
+          color: ${isScrolled || activePath === '/admin' ? '#0F766E' : '#FFFFFF'} !important;
         }
       `}</style>
 
@@ -184,16 +182,16 @@ export function Navbar({ activeHash, onNavigate, orgName }: NavbarProps) {
               <div className="flex flex-col gap-1.5 flex-1">
                 {navLinks.map((link) => (
                   <button
-                    key={link.hash}
-                    onClick={() => handleLinkClick(link.hash, link.label)}
+                    key={link.path}
+                    onClick={() => handleLinkClick(link.path, link.label)}
                     className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer flex items-center justify-between ${
-                      isLinkActive(link.hash)
+                      isLinkActive(link.path)
                         ? "text-brand-teal bg-brand-teal/10"
                         : "text-slate-600 hover:text-brand-teal hover:bg-slate-50"
                     }`}
                   >
                     <span>{link.label}</span>
-                    {isLinkActive(link.hash) && <div className="w-1.5 h-1.5 rounded-full bg-brand-teal" />}
+                    {isLinkActive(link.path) && <div className="w-1.5 h-1.5 rounded-full bg-brand-teal" />}
                   </button>
                 ))}
               </div>

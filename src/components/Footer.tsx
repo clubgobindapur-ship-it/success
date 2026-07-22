@@ -6,21 +6,17 @@ import { ContactInfo } from "../types";
 interface FooterProps {
   contactInfo: ContactInfo;
   orgName: string;
-  onNavigate: (hash: string) => void;
+  onNavigate: (path: string) => void;
 }
 
 export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
-  const handleNavClick = (hash: string, label: string) => {
-    onNavigate(hash);
+  const handleNavClick = (path: string, label: string) => {
+    onNavigate(path);
     trackEvent("navigation_click", {
-      targetHash: hash,
+      targetPath: path,
       linkLabel: label,
       location: "footer"
     });
-    const element = document.getElementById(hash.replace("#", ""));
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
 
   const handleSocialClick = (platform: string, url: string) => {
@@ -76,7 +72,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
           <ul className="flex flex-col gap-2 text-sm">
             <li>
               <button
-                onClick={() => handleNavClick("#home", "Footer Home")}
+                onClick={() => handleNavClick("/", "Footer Home")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 প্রধান পাতা (হোম)
@@ -84,7 +80,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
             </li>
             <li>
               <button
-                onClick={() => handleNavClick("#about", "Footer About")}
+                onClick={() => handleNavClick("/about", "Footer About")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 আমাদের পরিচিতি
@@ -92,7 +88,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
             </li>
             <li>
               <button
-                onClick={() => handleNavClick("#services", "Footer Services")}
+                onClick={() => handleNavClick("/services", "Footer Services")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 আমাদের সেবাসমূহ
@@ -100,7 +96,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
             </li>
             <li>
               <button
-                onClick={() => handleNavClick("#water", "Footer Water")}
+                onClick={() => handleNavClick("/water", "Footer Water")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 বিশুদ্ধ পানি প্রকল্প
@@ -108,7 +104,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
             </li>
             <li>
               <button
-                onClick={() => handleNavClick("#social", "Footer Social")}
+                onClick={() => handleNavClick("/social", "Footer Social")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 সামাজিক কার্যক্রম
@@ -125,7 +121,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
           <ul className="flex flex-col gap-2 text-sm">
             <li>
               <button
-                onClick={() => handleNavClick("#committee", "Footer Committee")}
+                onClick={() => handleNavClick("/committee", "Footer Committee")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 পরিচালনা কমিটি
@@ -133,7 +129,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
             </li>
             <li>
               <button
-                onClick={() => handleNavClick("#gallery", "Footer Gallery")}
+                onClick={() => handleNavClick("/gallery", "Footer Gallery")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 ফটো গ্যালারি
@@ -141,7 +137,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
             </li>
             <li>
               <button
-                onClick={() => handleNavClick("#news", "Footer News")}
+                onClick={() => handleNavClick("/news", "Footer News")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 খবর ও নোটিশ
@@ -149,7 +145,15 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
             </li>
             <li>
               <button
-                onClick={() => handleNavClick("#privacy", "Footer Privacy")}
+                onClick={() => handleNavClick("/career", "Footer Career")}
+                className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
+              >
+                ক্যারিয়ার ও নিয়োগ
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => handleNavClick("/privacy", "Footer Privacy")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 গোপনীয়তা নীতি
@@ -157,7 +161,7 @@ export function Footer({ contactInfo, orgName, onNavigate }: FooterProps) {
             </li>
             <li>
               <button
-                onClick={() => handleNavClick("#terms", "Footer Terms")}
+                onClick={() => handleNavClick("/terms", "Footer Terms")}
                 className="hover:text-brand-teal transition cursor-pointer font-sans font-semibold"
               >
                 শর্তাবলী ও নিয়মাবলী
