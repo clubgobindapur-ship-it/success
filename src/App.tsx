@@ -40,9 +40,14 @@ function MainAppContent() {
 
   // Helper to scroll smoothly to a section element
   const scrollToSection = (pathOrSection: string, smooth = true) => {
-    let sectionId = pathOrSection.startsWith("/") ? pathOrSection.slice(1) : pathOrSection;
+    let sectionId = pathOrSection;
+    if (sectionId.startsWith("/")) sectionId = sectionId.slice(1);
+    if (sectionId.endsWith("/")) sectionId = sectionId.slice(0, -1);
     sectionId = sectionId.replace("#", "");
+
     if (!sectionId || sectionId === "home") sectionId = "home";
+    if (sectionId === "jobs") sectionId = "career";
+    if (sectionId === "faqs") sectionId = "faq";
 
     const el = document.getElementById(sectionId);
     if (el) {
@@ -71,11 +76,21 @@ function MainAppContent() {
       trackEvent("admin_route_entered", { time: new Date().toISOString() });
     } else {
       setIsAdminRoute(false);
-      if (scroll) {
+      if (scroll && !isLoading) {
         setTimeout(() => scrollToSection(currentPath, false), 100);
       }
     }
   };
+
+  // When initial data loading finishes, scroll to the requested URL section
+  useEffect(() => {
+    if (!isLoading && !isAdminRoute) {
+      const currentPath = window.location.pathname;
+      if (currentPath && currentPath !== "/" && currentPath !== "/home") {
+        setTimeout(() => scrollToSection(currentPath, false), 150);
+      }
+    }
+  }, [isLoading, isAdminRoute]);
 
   // Load Data from Firestore on startup
   const fetchCMSData = async () => {
